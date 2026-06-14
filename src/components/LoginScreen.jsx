@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePrepStore } from '../context/PrepContext';
-import { Lock, User, Sparkles, BookOpen, AlertCircle } from 'lucide-react';
+import { Lock, User, BookOpen, AlertCircle } from 'lucide-react';
 
 export const LoginScreen = ({ onLoginSuccess }) => {
   const { state } = usePrepStore();
@@ -39,7 +39,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
       return;
     }
 
-    setLoading(true);
+    loading || setLoading(true);
     const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
 
     try {
@@ -90,10 +90,9 @@ export const LoginScreen = ({ onLoginSuccess }) => {
           </div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
             <span>PrepHQ Workstation</span>
-            <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
           </h2>
           <p className="mt-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-            {isRegister ? 'Create User Profile' : 'Secure Session Login'}
+            {isRegister ? 'Register' : 'Login'}
           </p>
         </div>
 
@@ -194,7 +193,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             {loading ? (
               <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <span>{isRegister ? 'Register' : 'Authorize & Start'}</span>
+              <span>{isRegister ? 'Register' : 'Login'}</span>
             )}
           </button>
         </form>
