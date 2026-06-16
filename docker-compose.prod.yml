@@ -6,7 +6,7 @@ services:
     image: ghcr.io/<github-username>/prephq-backend:latest
     container_name: prephq-backend
     ports:
-      - "5001:5001"
+      - "${BACKEND_PORT:-5001}:5001"
     volumes:
       # Maps local directory server/data to container path to persist your SQLite database
       - ./server/data:/usr/src/app/data
@@ -14,17 +14,15 @@ services:
     environment:
       - PORT=5001
       - NODE_ENV=production
-      # IMPORTANT: Replace this with a strong random secret key on your homelab!
-      - JWT_SECRET=change_me_to_a_secure_random_string_123456!
-      # Set to the origin URL used to access the application
-      - ALLOWED_ORIGIN=http://localhost
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-http://localhost:8080}
 
   frontend:
     # Replace <github-username> with your actual GitHub username
     image: ghcr.io/<github-username>/prephq-frontend:latest
     container_name: prephq-frontend
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
     restart: unless-stopped
