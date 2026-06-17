@@ -2,7 +2,7 @@
 
 <!-- version-start -->**Current Version**: v0.0.0<!-- version-end -->
 
-PrepHQ is a highly optimized, premium visual learning dashboard and active-recall workstation designed for high-frequency trading (HFT) preparers, quant developers, and computer systems engineers. It integrates full-featured study notebooks, targeted weekly syllabi, knowledge domain flashcard decks, quantitative firm profiles, and system pattern blueprint sheets in a single, high-fidelity workstation.
+PrepHQ is a highly optimized, premium visual learning dashboard and active-recall workstation designed for preparers, software developers, data analystsand computer systems engineers. It integrates full-featured study notebooks, targeted weekly syllabi, knowledge domain flashcard decks, quantitative firm profiles, and system pattern blueprint sheets in a single, high-fidelity workstation.
 
 ---
 
