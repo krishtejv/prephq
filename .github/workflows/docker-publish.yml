@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Build, Release, and Push Docker Images
 
 on:
   push:
@@ -7,22 +7,73 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Dynamically names the images as: ghcr.io/<github-username>/<repo-name>-frontend and -backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
-  IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
 
 jobs:
-  build-and-push:
+  build-release-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history and tags for version check
 
-      # Logs into GitHub Container Registry (GHCR) using the temporary runner token
+      - name: Extract version and check tag
+        id: check-version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          
+          # Fetch remote tags
+          git fetch --tags
+          
+          # Check if tag exists
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release tag and update README
+        if: steps.check-version.outputs.tag_exists == 'false'
+        run: |
+          # Configure Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Update README
+          sed -i 's/<!-- version-start -->.*<!-- version-end -->/<!-- version-start -->\*\*Current Version\*\*: v'${{ env.VERSION }}'<!-- version-end -->/g' README.md
+          
+          # Commit and Push README
+          git add README.md
+          git commit -m "chore: update README version to v${{ env.VERSION }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref_name }}
+          
+          # Create and Push Git Tag
+          git tag "v${{ env.VERSION }}"
+          git push origin "v${{ env.VERSION }}"
+
+      - name: Create GitHub Release
+        if: steps.check-version.outputs.tag_exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: |
+            ## PrepHQ v${{ env.VERSION }}
+            Automated production build and release.
+            
+            ### Docker Images:
+            * `ghcr.io/${{ github.repository }}-frontend:${{ env.VERSION }}`
+            * `ghcr.io/${{ github.repository }}-backend:${{ env.VERSION }}`
+          draft: false
+          prerelease: false
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -30,15 +81,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extracts tags (like latest and git-sha) and labels for the images
-      - name: Extract metadata (tags, labels) for Frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=
+      - name: Calculate Docker Tags
+        id: docker-tags
+        run: |
+          VERSION="${{ env.VERSION }}"
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f1).$(echo $VERSION | cut -d. -f2)
+          
+          # Base image path
+          FRONTEND_BASE="${{ env.REGISTRY }}/${{ github.repository }}-frontend"
+          BACKEND_BASE="${{ env.REGISTRY }}/${{ github.repository }}-backend"
+          
+          # Always output latest
+          FRONTEND_TAGS="$FRONTEND_BASE:latest"
+          BACKEND_TAGS="$BACKEND_BASE:latest"
+          
+          if [ "${{ steps.check-version.outputs.tag_exists }}" = "false" ]; then
+            # Add versioned tags if new release
+            FRONTEND_TAGS="$FRONTEND_TAGS,$FRONTEND_BASE:$VERSION,$FRONTEND_BASE:$MINOR,$FRONTEND_BASE:$MAJOR"
+            BACKEND_TAGS="$BACKEND_TAGS,$BACKEND_BASE:$VERSION,$BACKEND_BASE:$MINOR,$BACKEND_BASE:$MAJOR"
+          else
+            # Otherwise add sha tag for tracking
+            SHA_TAG=$(git rev-parse --short HEAD)
+            FRONTEND_TAGS="$FRONTEND_TAGS,$FRONTEND_BASE:sha-$SHA_TAG"
+            BACKEND_TAGS="$BACKEND_TAGS,$BACKEND_BASE:sha-$SHA_TAG"
+          fi
+          
+          echo "FRONTEND_TAGS=$FRONTEND_TAGS" >> $GITHUB_OUTPUT
+          echo "BACKEND_TAGS=$BACKEND_TAGS" >> $GITHUB_OUTPUT
 
       - name: Build and push Frontend Docker image
         uses: docker/build-push-action@v5
@@ -46,17 +116,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-
-      - name: Extract metadata (tags, labels) for Backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=
+          tags: ${{ steps.docker-tags.outputs.FRONTEND_TAGS }}
 
       - name: Build and push Backend Docker image
         uses: docker/build-push-action@v5
@@ -64,5 +124,4 @@ jobs:
           context: ./server
           file: ./server/Dockerfile
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: ${{ steps.docker-tags.outputs.BACKEND_TAGS }}
