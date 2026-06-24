@@ -3,7 +3,7 @@ version: '3.8'
 services:
   backend:
     # Replace <github-username> with your actual GitHub username
-    image: ghcr.io/<github-username>/prephq-backend:latest
+    image: ghcr.io/krishtejv/prephq-backend:latest
     container_name: prephq-backend
     ports:
       - "${BACKEND_PORT:-5001}:5001"
@@ -19,7 +19,7 @@ services:
 
   frontend:
     # Replace <github-username> with your actual GitHub username
-    image: ghcr.io/<github-username>/prephq-frontend:latest
+    image: ghcr.io/krishtejv/prephq-frontend:latest
     container_name: prephq-frontend
     ports:
       - "${FRONTEND_PORT:-8080}:80"
