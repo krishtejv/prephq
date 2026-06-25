@@ -38,8 +38,8 @@ jobs:
           # In prod/test we need JWT_SECRET
           export JWT_SECRET=test_jwt_secret_12345
           npm start &
-          # Wait for backend to be ready
-          npx wait-on http://localhost:5001/api/auth/me --timeout 30000
+          # Wait for backend TCP port to be open
+          npx wait-on tcp:localhost:5001 --timeout 30000
         env:
           NODE_ENV: test
 
