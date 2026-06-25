@@ -39,20 +39,12 @@ jobs:
             echo "tag_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create release tag and update README
+      - name: Create release tag
         if: steps.check-version.outputs.tag_exists == 'false'
         run: |
           # Configure Git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Update README
-          sed -i 's/<!-- version-start -->.*<!-- version-end -->/<!-- version-start -->\*\*Current Version\*\*: v'${{ env.VERSION }}'<!-- version-end -->/g' README.md
-          
-          # Commit and Push README
-          git add README.md
-          git commit -m "chore: update README version to v${{ env.VERSION }} [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:${{ github.ref_name }}
           
           # Create and Push Git Tag
           git tag "v${{ env.VERSION }}"
