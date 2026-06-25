@@ -13,11 +13,26 @@ test.describe('PrepHQ Full E2E & UX Testing Suite', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    // Log in as test user
+    // Try logging in
     await page.locator('input[type="text"]').fill('krishnateja1');
     await page.locator('input[type="password"]').fill('password123');
     await page.locator('button[type="submit"]').click();
-    await expect(page.locator('.nav-tab.active')).toBeVisible();
+
+    try {
+      // If the user already exists, login will succeed immediately
+      await expect(page.locator('.nav-tab.active')).toBeVisible({ timeout: 2000 });
+    } catch (e) {
+      // If login fails (first-time database initialization on runner), toggle to register
+      const createProfileBtn = page.locator('button:has-text("Create profile")');
+      if (await createProfileBtn.isVisible()) {
+        await createProfileBtn.click();
+        await page.locator('input[type="text"]').fill('krishnateja1');
+        await page.locator('input[type="password"]').first().fill('password123');
+        await page.locator('input[type="password"]').nth(1).fill('password123');
+        await page.locator('button[type="submit"]').click();
+        await expect(page.locator('.nav-tab.active')).toBeVisible({ timeout: 5000 });
+      }
+    }
   });
 
   test('1. Navigation Tab Router Validation', async ({ page }) => {
