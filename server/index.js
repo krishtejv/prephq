@@ -98,21 +98,42 @@ app.post('/api/auth/register', async (req, res) => {
       [userId, username.trim(), hashedPassword, createdAt]
     );
 
-    // Seed blank state — new users start with no domains or data
+    // Seed default study state
     await dbRun(
       `INSERT INTO study_state (user_id, streak, last_studied_date, prep_plan, domains, neetcode, companies, patterns) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
-        0,
+        DEFAULT_STUDY_STATE.streak,
         null,
-        '[]',
-        '{}',
-        '[]',
-        '[]',
-        '[]'
+        JSON.stringify(DEFAULT_STUDY_STATE.prep_plan),
+        JSON.stringify(DEFAULT_STUDY_STATE.domains),
+        JSON.stringify(DEFAULT_STUDY_STATE.neetcode),
+        JSON.stringify(DEFAULT_STUDY_STATE.companies),
+        JSON.stringify(DEFAULT_STUDY_STATE.patterns)
       ]
     );
+
+    // Seed default notebook pages
+    for (const page of DEFAULT_NOTEBOOK_PAGES) {
+      const pageId = `${userId}-${page.id}`;
+      const parentId = page.parent_id ? `${userId}-${page.parent_id}` : null;
+      await dbRun(
+        `INSERT INTO notebook_pages (id, user_id, parent_id, title, body, status, collapsed, sort_order, type) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          pageId,
+          userId,
+          parentId,
+          page.title,
+          page.body || '',
+          page.status || 'todo',
+          page.collapsed || 0,
+          page.sort_order || 0,
+          page.type || 'file'
+        ]
+      );
+    }
 
     const token = generateToken({ id: userId, username });
     logger.info({ userId, username }, '[Auth Register] New user registered');
