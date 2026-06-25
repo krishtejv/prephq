@@ -32,14 +32,19 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Start Backend Server in Background
+      - name: Start Servers in Background
         run: |
+          # Start Backend
           cd server
-          # In prod/test we need JWT_SECRET
           export JWT_SECRET=test_jwt_secret_12345
           npm start &
-          # Wait for backend TCP port to be open
-          npx wait-on tcp:localhost:5001 --timeout 30000
+          
+          # Start Frontend (Vite)
+          cd ..
+          npm run dev &
+          
+          # Wait for both ports to be ready
+          npx wait-on tcp:localhost:5001 tcp:localhost:5173 --timeout 45000
         env:
           NODE_ENV: test
 
