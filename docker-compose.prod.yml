@@ -37,6 +37,6 @@ services:
       # If your package images are Private, uncomment this to mount your local docker login config
       # so Watchtower can authenticate to GHCR:
       # - ~/.docker/config.json:/config.json:ro
-    # Check for new images every 300 seconds (5 minutes) and clean up old image layers
+      # Check for new images every 300 seconds (5 minutes) and clean up old image layers
     command: --interval 300 --cleanup
     restart: unless-stopped
