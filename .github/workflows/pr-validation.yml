@@ -1,0 +1,47 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd server && npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build Frontend (Verify compiler safety)
+        run: npm run build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Start Backend Server in Background
+        run: |
+          cd server
+          # In prod/test we need JWT_SECRET
+          export JWT_SECRET=test_jwt_secret_12345
+          npm start &
+          # Wait for backend to be ready
+          npx wait-on http://localhost:5001/api/auth/me --timeout 30000
+        env:
+          NODE_ENV: test
+
+      - name: Run Playwright E2E Tests
+        run: npx playwright test
